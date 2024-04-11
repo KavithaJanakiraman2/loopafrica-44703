@@ -16,6 +16,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from datetime import datetime
 from django.db.models import Case, When, Value, IntegerField
+from modules.two_factor_authentication.twofactorauth.utils import Util
 
 
 from home.api.v1.serializers import (
@@ -253,7 +254,17 @@ class AppointmentViewSet(ModelViewSet):
         """
         serializer = AppointmentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            # serializer.save()
+            appointment = serializer.save()
+
+            # prepare email data
+            email_data = {
+            'subject' : "Appointment Confirmation",
+            'body' : "Booking successful. Here is the zoom meeting link: <insert link here>",
+            'to_email' : appointment.user.email
+            }
+            # Send confirmation email using send_email function from utils.py
+            Util.send_email(email_data)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     

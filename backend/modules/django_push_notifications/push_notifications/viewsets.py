@@ -32,6 +32,12 @@ class NotificationViewSet(viewsets.ViewSet):
             }
             #client.create_notification(notification_content)
             headers = {"Content-Type": request.headers['Content-Type'], "Authorization": request.headers['Authorization'], "Accept": request.headers['Accept']}
+            # headers = {
+        #     "Content-Type": request.headers.get('Content-Type', ''),
+        #     "Authorization": request.headers.get('Authorization', ''),
+        #     "Accept": request.headers.get('Accept', '')
+        # }
+        #     response = requests.post("https://onesignal.com/api/v1/notifications/", headers=headers, data=json.dumps(notification_content))
             response = requests.post("https://onesignal.com/api/v1/notifications/", headers=headers, data=json.dumps(request.data))
             return Response({"message": "Notification created", "response": response.json()})
         except Exception as e:

@@ -85,7 +85,8 @@ LOCAL_APPS = [
     'modules.django_inventory_management.inventory_management',
     'hospital_operations.pharmacy',
     'hospital_operations.emr',    
-    'modules.two_factor_authentication.twofactorauth'
+    'modules.two_factor_authentication.twofactorauth',
+    'payment_gateway.subscriptions',
 ]
 THIRD_PARTY_APPS = [
     'rest_framework',

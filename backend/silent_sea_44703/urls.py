@@ -38,6 +38,7 @@ urlpatterns = [
     #path("rest-auth/registration/", include("dj_rest_auth.registration.urls")),
     path("rest-auth/registration/", include("rest_auth.registration.urls")),    
     #path('paystack/', include('paystack.urls')),
+    path('subscriptions/', include('payment_gateway.subscriptions.urls')),
 ]
 
 admin.site.site_header = "Silent Sea"
