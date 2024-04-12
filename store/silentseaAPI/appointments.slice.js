@@ -21,6 +21,15 @@ export const api_v1_appointments_create_create = createAsyncThunk(
     return response.data
   }
 )
+export const api_v1_appointments_todo_appointments_retrieve = createAsyncThunk(
+  "appointments/api_v1_appointments_todo_appointments_retrieve",
+  async payload => {
+    const response = await apiService.api_v1_appointments_todo_appointments_retrieve(
+      payload
+    )
+    return response.data
+  }
+)
 export const api_v1_appointments_update_feedback_partial_update = createAsyncThunk(
   "appointments/api_v1_appointments_update_feedback_partial_update",
   async payload => {
@@ -92,6 +101,37 @@ const appointmentsSlice = createSlice({
         }
       })
       .addCase(
+        api_v1_appointments_todo_appointments_retrieve.pending,
+        (state, action) => {
+          if (state.api.loading === "idle") {
+            state.api.loading = "pending"
+          }
+        }
+      )
+      .addCase(
+        api_v1_appointments_todo_appointments_retrieve.fulfilled,
+        (state, action) => {
+          if (state.api.loading === "pending") {
+            state.entities = [
+              ...state.entities.filter(
+                record => record.id !== action.payload.id
+              ),
+              action.payload
+            ]
+            state.api.loading = "idle"
+          }
+        }
+      )
+      .addCase(
+        api_v1_appointments_todo_appointments_retrieve.rejected,
+        (state, action) => {
+          if (state.api.loading === "pending") {
+            state.api.error = action.error
+            state.api.loading = "idle"
+          }
+        }
+      )
+      .addCase(
         api_v1_appointments_update_feedback_partial_update.pending,
         (state, action) => {
           if (state.api.loading === "idle") {
@@ -125,6 +165,7 @@ export default {
   api_v1_appointments_list,
   api_v1_appointments_retrieve,
   api_v1_appointments_create_create,
+  api_v1_appointments_todo_appointments_retrieve,
   api_v1_appointments_update_feedback_partial_update,
   slice: appointmentsSlice
 }
