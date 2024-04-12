@@ -755,3 +755,29 @@ class LikeDoctorSerializer(serializers.ModelSerializer):
         model = LikeDoctor
         fields = "__all__"
         
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField(write_only=True, required=True)
+    password = serializers.CharField(write_only=True, required=True)
+    confirm_password = serializers.CharField(write_only=True, required=True)
+ 
+    class Meta:
+        fields = ('email', 'password', 'confirm_password')
+        extra_kwargs = {
+            'password': {
+                'write_only': True,
+                'style': {
+                    'input_type': 'password'
+                }
+            }
+        }
+ 
+    def validate(self, attrs):
+        if attrs['password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({"error": "Password fields didn't match."})
+ 
+        return attrs
+ 
+    def update(self, instance, validated_data):
+        instance.set_password(validated_data['password'])
+        instance.save()
+        return instance
