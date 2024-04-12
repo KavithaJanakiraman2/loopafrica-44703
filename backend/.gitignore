@@ -88,3 +88,8 @@ celerybeat-schedule
 venv/
 ENV/
 myvenv/
+
+#sonar
+.scannerwork
+.scanner
+scannerwork/

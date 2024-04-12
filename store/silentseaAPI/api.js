@@ -98,6 +98,9 @@ function api_v1_feedback_destroy(payload) {
 function api_v1_login_create(payload) {
   return silentseaAPI.post(`/api/v1/login/`, payload)
 }
+function api_v1_resetpassword_create(payload) {
+  return silentseaAPI.post(`/api/v1/resetpassword/`, payload)
+}
 function api_v1_sendresetpasswordemail_create(payload) {
   return silentseaAPI.post(`/api/v1/sendresetpasswordemail/`)
 }
@@ -598,6 +601,7 @@ export const apiService = {
   api_v1_feedback_partial_update,
   api_v1_feedback_destroy,
   api_v1_login_create,
+  api_v1_resetpassword_create,
   api_v1_sendresetpasswordemail_create,
   api_v1_signup_create,
   api_v1_signup_with_email_create,
