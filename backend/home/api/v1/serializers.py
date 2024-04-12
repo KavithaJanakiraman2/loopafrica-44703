@@ -27,6 +27,7 @@ import os
 import boto3
 from urllib.parse import urlparse
 import environ
+
  
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env_file = os.path.join(BASE_DIR, ".env")
@@ -409,6 +410,32 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
  
         return instance  
 
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField(write_only=True, required=True)
+    password1 = serializers.CharField(write_only=True, required=True)
+    password2 = serializers.CharField(write_only=True, required=True)
+ 
+    class Meta:
+        fields = ('email', 'password1', 'password2')
+        extra_kwargs = {
+            'password': {
+                'write_only': True,
+                'style': {
+                    'input_type': 'password'
+                }
+            }
+        }
+ 
+    def validate(self, attrs):
+        if attrs['password1'] != attrs['password2']:
+            raise serializers.ValidationError({"error": "Password fields didn't match."})
+ 
+        return attrs
+ 
+    def update(self, instance, validated_data):
+        instance.set_password(validated_data['password'])
+        instance.save()
+        return instance
 
 class EditUserSerializer(serializers.ModelSerializer):
     """

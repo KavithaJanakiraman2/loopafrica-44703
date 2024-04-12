@@ -34,6 +34,7 @@ from home.api.v1.serializers import (
     ChangePasswordSerializer,
     DoctorSerializer,
     ToDOListSerializer,
+    ResetPasswordSerializer,
 )
 
 
@@ -547,6 +548,24 @@ class ChangePasswordView(APIView):
                 'errors': serializer.errors
             }
             return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+        
+class ResetPasswordView(APIView):
+    serializer_class = ResetPasswordSerializer
+    
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data.get('email')
+            password = serializer.validated_data.get('password')
+            user = User.objects.filter(email=email).first()
+            if user:
+                user.set_password(password)
+                user.save()
+                return Response({"message": "Password reset successfully"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "User with this email does not exist"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 class ToDoListViewSet(ModelViewSet):
     """
