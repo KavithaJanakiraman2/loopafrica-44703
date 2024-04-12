@@ -412,11 +412,11 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
 
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField(write_only=True, required=True)
-    password1 = serializers.CharField(write_only=True, required=True)
-    password2 = serializers.CharField(write_only=True, required=True)
+    password = serializers.CharField(write_only=True, required=True)
+    confirm_password = serializers.CharField(write_only=True, required=True)
  
     class Meta:
-        fields = ('email', 'password1', 'password2')
+        fields = ('email', 'password', 'confirm_password')
         extra_kwargs = {
             'password': {
                 'write_only': True,
@@ -427,7 +427,7 @@ class ResetPasswordSerializer(serializers.Serializer):
         }
  
     def validate(self, attrs):
-        if attrs['password1'] != attrs['password2']:
+        if attrs['password'] != attrs['confirm_password']:
             raise serializers.ValidationError({"error": "Password fields didn't match."})
  
         return attrs

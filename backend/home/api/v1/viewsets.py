@@ -561,7 +561,7 @@ class ResetPasswordView(APIView):
             if user:
                 user.set_password(password)
                 user.save()
-                return Response({"message": "Password reset successfully"}, status=status.HTTP_200_OK)
+                return Response({"message": "Password updated successfully"}, status=status.HTTP_200_OK)
             else:
                 return Response({"error": "User with this email does not exist"}, status=status.HTTP_404_NOT_FOUND)
         else:
