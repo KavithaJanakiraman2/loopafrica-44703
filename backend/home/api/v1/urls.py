@@ -14,6 +14,7 @@ from home.api.v1.viewsets import (
     ChangePasswordView,
     DoctorViewSet,
     ToDoListViewSet,
+    ResetPasswordView,
 )
 
 router = DefaultRouter()
@@ -37,4 +38,5 @@ urlpatterns = [
     path('appointments/<int:pk>/', AppointmentViewSet.as_view({'get':'retrieve'}), name='get_appointment'),    
     path('appointments/todo_appointments/<int:user_id>/', AppointmentViewSet.as_view({'get': 'todo_appointments'}), name='todo_appointments'),
     path('doctors/<int:pk>/favourite/', DoctorViewSet.as_view({'post': 'favourite'}), name='favourite'),
+    path('resetpassword/',ResetPasswordView.as_view(), name='resetpassword'),
 ]
