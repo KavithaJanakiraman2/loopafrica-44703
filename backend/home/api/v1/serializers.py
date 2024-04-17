@@ -676,7 +676,7 @@ class PatientProfileCompletionSerializer(serializers.ModelSerializer):
             total_fields = len(required_fields)
             completion_percentage = (filled_fields / total_fields) * 100
             
-            completion_percentage = round(completion_percentage, 2)
+            completion_percentage = round(completion_percentage)
 
             return completion_percentage
         return 0  # Profile Not Available
@@ -734,7 +734,7 @@ class DoctorProfileCompletionSerializer(serializers.ModelSerializer):
             total_fields = len(required_fields)
             completion_percentage = (filled_fields / total_fields) * 100
 
-            completion_percentage = round(completion_percentage, 2)
+            completion_percentage = round(completion_percentage)
 
             return completion_percentage
         return 0  # Profile Not Available
