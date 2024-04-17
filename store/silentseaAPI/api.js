@@ -53,6 +53,9 @@ function api_v1_doctors_partial_update(payload) {
 function api_v1_doctors_destroy(payload) {
   return silentseaAPI.delete(`/api/v1/doctors/${payload.id}/`)
 }
+function api_v1_doctors_doctor_appointments_retrieve(payload) {
+  return silentseaAPI.get(`/api/v1/doctors/${payload.id}/doctor_appointments/`)
+}
 function api_v1_doctors_favourite_create_2(payload) {
   return silentseaAPI.post(`/api/v1/doctors/${payload.id}/favourite/`, payload)
 }
@@ -586,6 +589,7 @@ export const apiService = {
   api_v1_doctors_update,
   api_v1_doctors_partial_update,
   api_v1_doctors_destroy,
+  api_v1_doctors_doctor_appointments_retrieve,
   api_v1_doctors_favourite_create_2,
   api_v1_doctors_doctor_specialized_retrieve,
   api_v1_doctors_favourite_retrieve,
