@@ -461,6 +461,36 @@ class DoctorViewSet(ModelViewSet):
         serializer = DoctorSerializer(doctors, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'])
+    def doctor_appointments(self, request, pk=None):
+        """
+        Retrieve appointments for a specific doctor on particular dates and list the appointment times.
+ 
+        Parameters:
+        - request: The HTTP request object.
+        - pk: The ID of the doctor.
+ 
+        Returns:
+        - Returns the serialized data of appointments for the specific doctor on the specified dates or all scheduled dates with HTTP status 200.
+        """
+        doctor = self.get_object()
+        date_param = request.query_params.get('date')
+       
+        # Parse date parameter
+        if date_param:
+            try:
+                date = datetime.strptime(date_param, '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'error': 'Invalid date format. Please use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+           
+            appointments = doctor.appointment_set.filter(date=date)
+        else:
+            # If date parameter is not provided, retrieve all appointments for the doctor
+            appointments = doctor.appointment_set.all()
+       
+        serializer = AppointmentSerializer(appointments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
     @action(detail=False, methods=['get', 'post'])
     def favourite(self, request, pk=None):
         user = request.user
@@ -551,7 +581,7 @@ class ToDoListViewSet(ModelViewSet):
         permission_classes (list): The list of permission classes for this viewset.
     """
 
-    queryset = ToDoList.objects.all()
+    queryset = ToDoList.objects.all().order_by('-created_at')
     serializer_class = ToDOListSerializer
     permission_classes = [IsAuthenticated]
  
