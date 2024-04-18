@@ -178,7 +178,7 @@ class Doctor(models.Model):
         ("mental_health", "Mental Health"),
         ("practitioner", "Practitioner"),
         ("ob_gyn", "OB-GYN"),
-        ("pt", "Physical Therapy"),
+        ("pt", "Physical Therapist"),
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='doctor', null=True, blank=True)
