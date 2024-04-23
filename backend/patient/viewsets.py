@@ -174,6 +174,14 @@ class TestResultUploadViewSet(ModelViewSet):
     serializer_class = TestResultUploadSerializer
     parser_classes = (MultiPartParser, FormParser,)
 
+    def get_serializer_context(self):
+        """
+        Add the request object to the serializer's context.
+        """
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
     def create(self, request, *args, **kwargs):
         """
         Upload a new test result.
@@ -202,7 +210,7 @@ class TestResultUploadViewSet(ModelViewSet):
         - A Response object with the serialized data of all test results.
         """
         queryset = TestResult.objects.all()
-        serializer = TestResultUploadSerializer(queryset, many=True)
+        serializer = TestResultUploadSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
     
     def delete(self, request, *args, **kwargs):

@@ -17,7 +17,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from datetime import datetime
 from django.db.models import Case, When, Value, IntegerField
 from modules.two_factor_authentication.twofactorauth.utils import Util
-
+from django.utils import timezone
+import requests
+from modules.django_push_notifications.push_notifications.utils import APP_ID, REST_API_KEY, send_push_notification
 
 from home.api.v1.serializers import (
     SignupSerializer,
@@ -60,9 +62,53 @@ class SignUpWithEmailView(CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         token, created = Token.objects.get_or_create(user=user)
-        user_serializer = UserSerializer(user)
-        return Response({"token": token.key, "user": user_serializer.data})
+        # user_serializer = UserSerializer(user)
+        # return Response({"token": token.key, "user": user_serializer.data})
 
+        # Register and subscribe user to OneSignal push notifications
+        try:
+            user_id = user.id
+            headers = {
+                "accept": "application/json",
+                "content-type": "application/json",
+                "Authorization": f"Basic {REST_API_KEY}"
+            }
+
+            # Check if the user is already subscribed
+            url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{user_id}"
+            response = requests.get(url, headers=headers)
+            data = response.json()
+
+            if data.get('id'):
+                # User is already subscribed, no need to subscribe again
+                pass
+            else:
+                # Register the user with OneSignal
+                url = f"https://api.onesignal.com/apps/{APP_ID}/users"
+                user_payload = {
+                    "identity": { "external_id": f"{user_id}" }
+                }
+                user_response = requests.post(url, json=user_payload, headers=headers)
+                
+                # Subscribe the user to push notifications
+                sub_payload = {
+                    "subscription": {
+                        "type": "AndroidPush",
+                        "enabled": True,
+                        "token": str(user_id)  # Using user's ID as token
+                    }
+                }
+                url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{user_id}/subscriptions"
+                sub_response = requests.post(url, json=sub_payload, headers=headers)
+
+            
+        except Exception as e:
+            print(e)  # Handle errors, e.g., log them
+        
+        user_serializer = UserSerializer(user)
+        
+        return Response({"token": token.key, "user": user_serializer.data})
+    
 class LoginViewSet(ViewSet):
     """Based on rest_framework.authtoken.views.ObtainAuthToken"""
 
@@ -266,6 +312,13 @@ class AppointmentViewSet(ModelViewSet):
             }
             # Send confirmation email using send_email function from utils.py
             Util.send_email(email_data)
+
+            # Send push notification
+            doctor_name = appointment.doctor.user.get_full_name()  # Get the full name of the doctor
+            appointment_date = appointment.date.strftime("%Y-%m-%d")
+            appointment_time = appointment.consult_time.strftime("%H:%M:%S")
+            message = f"Consultation with Dr.{doctor_name} on {appointment_date} at {appointment_time}"
+            send_push_notification([str(appointment.user.id)], "Appointment", message)            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -514,6 +567,36 @@ class DoctorViewSet(ModelViewSet):
             LikeDoctor.objects.create(doctor=doctor, user=user, favourite=favourite)
             return Response({'detail': f'Doctor {doctor.user.username} added to your favourite list.'}, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['get'])
+    def doctor_appointments(self, request, pk=None):
+        """
+        Retrieve appointments for a specific doctor on particular dates and list the appointment times.
+
+        Parameters:
+        - request: The HTTP request object.
+        - pk: The ID of the doctor.
+
+        Returns:
+        - Returns the serialized data of appointments for the specific doctor on the specified dates or all scheduled dates with HTTP status 200.
+        """
+        doctor = self.get_object()
+        date_param = request.query_params.get('date')
+        
+        # Parse date parameter
+        if date_param:
+            try:
+                date = datetime.strptime(date_param, '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'error': 'Invalid date format. Please use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            appointments = doctor.appointment_set.filter(date=date)
+        else:
+            # If date parameter is not provided, retrieve all appointments for the doctor
+            appointments = doctor.appointment_set.all()
+        
+        serializer = AppointmentSerializer(appointments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
     
 class SendPasswordResetEmailView(APIView):
     """
@@ -580,7 +663,7 @@ class ToDoListViewSet(ModelViewSet):
         permission_classes (list): The list of permission classes for this viewset.
     """
 
-    queryset = ToDoList.objects.all()
+    queryset = ToDoList.objects.all().order_by('-created_at')
     serializer_class = ToDOListSerializer
     permission_classes = [IsAuthenticated]
  
