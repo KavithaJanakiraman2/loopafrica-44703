@@ -5,7 +5,7 @@ import json
 APP_ID = os.environ.get('APP_ID')
 REST_API_KEY = os.environ.get('REST_API_KEY')
 
-def send_push_notification(ids,message_title,message_body):
+def send_push_notification(ids,message_title,message_body, consult_time, appointment_date, doctor_name):
     headers = {
                 "accept": "application/json",
                 "content-type": "application/json",
@@ -31,7 +31,12 @@ def send_push_notification(ids,message_title,message_body):
             "include_external_user_ids": external_user_ids, # include external user id
             "include_subscription_ids": [sub_id for sub_id in subscription_ids],
             "target_channel": "push",
-            "data": {"message": message_body},
+            "data": {
+                 "message": message_body,
+                 "doctor_name": doctor_name,
+                 "consult_time":consult_time,
+                 "appointment_date":appointment_date
+            },
             "contents": {"en": message_title}
             }
         print("DATA",data)

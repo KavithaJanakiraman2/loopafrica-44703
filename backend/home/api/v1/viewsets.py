@@ -90,23 +90,33 @@ class SignUpWithEmailView(CreateAPIView):
                 }
                 user_response = requests.post(url, json=user_payload, headers=headers)
                 
-                # Subscribe the user to push notifications
-                sub_payload = {
+                # Subscribe the user to Android push notifications
+                android_sub_payload = {
                     "subscription": {
                         "type": "AndroidPush",
                         "enabled": True,
                         "token": str(user_id)  # Using user's ID as token
                     }
                 }
-                url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{user_id}/subscriptions"
-                sub_response = requests.post(url, json=sub_payload, headers=headers)
+                android_sub_url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{user_id}/subscriptions"
+                android_sub_response = requests.post(android_sub_url, json=android_sub_payload, headers=headers)
 
-            
+                # Subscribe the user to iOS push notifications
+                ios_sub_payload = {
+                    "subscription": {
+                        "type": "iOSPush",
+                        "enabled": True,
+                        "token": str(user_id)  # Using user's ID as token
+                    }
+                }
+                ios_sub_url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{user_id}/subscriptions"
+                ios_sub_response = requests.post(ios_sub_url, json=ios_sub_payload, headers=headers)
+
         except Exception as e:
             print(e)  # Handle errors, e.g., log them
-        
+
         user_serializer = UserSerializer(user)
-        
+
         return Response({"token": token.key, "user": user_serializer.data})
     
 class LoginViewSet(ViewSet):
@@ -318,7 +328,15 @@ class AppointmentViewSet(ModelViewSet):
             appointment_date = appointment.date.strftime("%Y-%m-%d")
             appointment_time = appointment.consult_time.strftime("%H:%M:%S")
             message = f"Consultation with Dr.{doctor_name} on {appointment_date} at {appointment_time}"
-            send_push_notification([str(appointment.user.id)], "Appointment", message)            
+            send_push_notification(
+                [str(appointment.user.id)],
+                "Appointment",
+                message,
+                appointment_time,  # Pass consult_time
+                appointment_date,  # Pass appointment_date
+                doctor_name  # Pass doctor_name
+            )
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
