@@ -29,7 +29,8 @@ def send_push_notification(ids,message_title,message_body, consult_time, appoint
         data = {
             "app_id": APP_ID,
             "include_external_user_ids": external_user_ids, # include external user id
-            "include_subscription_ids": [sub_id for sub_id in subscription_ids],
+            # "include_player_ids": [sub_id for sub_id in subscription_ids],
+            "include_player_ids": [sub_id for sub_id in subscription_ids],
             "target_channel": "push",
             "data": {
                  "message": message_body,

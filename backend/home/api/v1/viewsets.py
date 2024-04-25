@@ -20,6 +20,10 @@ from modules.two_factor_authentication.twofactorauth.utils import Util
 from django.utils import timezone
 import requests
 from modules.django_push_notifications.push_notifications.utils import APP_ID, REST_API_KEY, send_push_notification
+from modules.django_push_notifications.push_notifications.models import Notification
+import logging
+
+logger = logging.getLogger(__name__)
 
 from home.api.v1.serializers import (
     SignupSerializer,
@@ -324,22 +328,29 @@ class AppointmentViewSet(ModelViewSet):
             Util.send_email(email_data)
 
             # Send push notification
-            doctor_name = appointment.doctor.user.get_full_name()  # Get the full name of the doctor
-            appointment_date = appointment.date.strftime("%Y-%m-%d")
-            appointment_time = appointment.consult_time.strftime("%H:%M:%S")
-            message = f"Consultation with Dr.{doctor_name} on {appointment_date} at {appointment_time}"
-            send_push_notification(
-                [str(appointment.user.id)],
-                "Appointment",
-                message,
-                appointment_time,  # Pass consult_time
-                appointment_date,  # Pass appointment_date
-                doctor_name  # Pass doctor_name
-            )
-
+            try:
+                doctor_name = appointment.doctor.user.username  # Get the full name of the doctor
+                appointment_date = appointment.date.strftime("%Y-%m-%d")
+                appointment_time = appointment.consult_time.strftime("%H:%M:%S")
+                message = f"Consultation with Dr.{doctor_name} on {appointment_date} at {appointment_time}"
+                # Send push notification to the user and capture the response
+                send_push_notification(
+                    [str(appointment.user.id)],
+                    "Appointment",
+                    message,
+                    appointment_time,
+                    appointment_date,
+                    doctor_name
+                )
+            except Exception as e:
+                logger.error(f"Error occurred while sending push notification: {str(e)}")  # Log the error
+            # Handle any exceptions raised during notification sending
+            # Log the error or perform any necessary actions
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
+                
     def retrieve(self, request, pk=None):
         """
         Retrieve a specific appointment by ID.
