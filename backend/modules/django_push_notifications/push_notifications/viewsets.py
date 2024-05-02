@@ -1,22 +1,17 @@
 from rest_framework import authentication, permissions
 from rest_framework import viewsets
 #from .models import OneSignalApp
-from .serializers import NotificationSerializer, UserNotificationSerializer
+from .serializers import NotificationSerializer
 #from .serializers import OneSignalAppSerializer, NotificationSerializer
 from .client import Client
 from rest_framework.response import Response
 import requests
 import json
-from .utils import APP_ID, REST_API_KEY
 from datetime import datetime
-from rest_framework import mixins
-from rest_framework.viewsets import GenericViewSet
-from rest_framework.views import APIView
-from rest_framework import status
-from rest_framework import generics
-from .models import Notification
-from django.db.models import Q
-from django.utils import timezone
+import os
+
+APP_ID = os.environ.get('APP_ID')
+REST_API_KEY = os.environ.get('REST_API_KEY')
 
 # class OneSignalAppViewSet(viewsets.ModelViewSet):
 #     queryset = OneSignalApp.objects.all()
@@ -87,8 +82,60 @@ class NotificationViewSet(viewsets.ViewSet):
         # Add your logic to retrieve and return the notification history
         pass
 
-class NotificationDetailsBySubscriptionViewSet(viewsets.ViewSet):
+# class ListUserNotificationViewSet(viewsets.ViewSet):
+#     '''To retrieve notifications associated with the provided subscription ID or user ID and future appointment dates'''
+#     def retrieve(self, request, target_id=None):
+#         try:
+#             if not target_id:
+#                 return Response({"error": "User Id or Subscription Id is required"}, status=400)
+            
+#             # Fetch notifications associated with the app ID
+#             headers = {
+#                 "accept": "application/json",
+#                 "content-type": "application/json",
+#                 "Authorization": f"Basic {REST_API_KEY}"
+#             }
+#             url = f"https://onesignal.com/api/v1/notifications?app_id={APP_ID}"
+#             response = requests.get(url, headers=headers)
+#             response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
+#             notifications_data = response.json()
+            
+#             # Check if notifications are present in the response
+#             if "notifications" in notifications_data:
+#                 notifications = notifications_data["notifications"]
+                
+#                 # Filter notifications by the provided target_id and future appointment dates
+#                 filtered_notifications = []
+#                 current_datetime = datetime.now()
+#                 for notification in notifications:
+#                     include_player_ids = notification.get("include_player_ids", [])
+#                     include_external_user_ids = notification.get("include_external_user_ids", [])
+#                     # send_after = notification.get("send_after")
+#                     appointment_date_str = notification.get("data", {}).get("appointment_date")
+#                     consult_time_str = notification.get("data", {}).get("consult_time")
+#                     if appointment_date_str and consult_time_str:
+#                         notification_datetime = datetime.strptime(f"{appointment_date_str} {consult_time_str}", "%Y-%m-%d %H:%M:%S")
+#                         # Check if the target_id is in the include_player_ids or include_external_user_ids list
+#                         # Also, ensure that the notification_datetime is in the future
+#                         if (target_id in include_player_ids or target_id in include_external_user_ids) and notification_datetime > current_datetime:
+#                             filtered_notifications.append(notification)
+                
+#                 # Check if there are notifications associated with the target Id and future dates
+#                 if filtered_notifications:
+#                     # Return the list of notifications
+#                     return Response(filtered_notifications)
+#                 else:
+#                     return Response({"error": f"No notifications found for the provided Id '{target_id}' and future dates"}, status=404)
+#             else:
+#                 return Response({"error": "No notifications found"}, status=404)
+                
+#         except requests.exceptions.RequestException as e:
+#             # Handle any exceptions (e.g., network errors, invalid responses)
+#             return Response({"error": str(e)}, status=500)
+
+class ListUserNotificationViewSet(viewsets.ViewSet):
     '''To retrieve notifications associated with the provided subscription ID or user ID and future appointment dates'''
+
     def retrieve(self, request, target_id=None):
         try:
             if not target_id:
@@ -105,143 +152,33 @@ class NotificationDetailsBySubscriptionViewSet(viewsets.ViewSet):
             response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
             notifications_data = response.json()
             
-            # Check if notifications are present in the response
+            filtered_notifications = []
+            current_datetime = datetime.now()
+
             if "notifications" in notifications_data:
                 notifications = notifications_data["notifications"]
                 
-                # Filter notifications by the provided identifier and future appointment dates
-                filtered_notifications = []
-                current_datetime = datetime.now()
                 for notification in notifications:
                     include_player_ids = notification.get("include_player_ids", [])
                     include_external_user_ids = notification.get("include_external_user_ids", [])
-                    send_after = notification.get("send_after")
                     appointment_date_str = notification.get("data", {}).get("appointment_date")
                     consult_time_str = notification.get("data", {}).get("consult_time")
-                    if send_after and appointment_date_str and consult_time_str:
-                        notification_datetime = datetime.strptime(f"{appointment_date_str} {consult_time_str}", "%Y-%m-%d %H:%M:%S")
-                        # Check if the identifier is in the include_player_ids or include_external_user_ids list
-                        # Also, ensure that the notification_datetime is in the future
+                    
+                    if appointment_date_str and consult_time_str:
+                        try:
+                            notification_datetime = datetime.strptime(f"{appointment_date_str} {consult_time_str}", "%Y-%m-%d %H:%M:%S")
+                        except ValueError:
+                            # Handle invalid date/time formats
+                            continue
+
                         if (target_id in include_player_ids or target_id in include_external_user_ids) and notification_datetime > current_datetime:
                             filtered_notifications.append(notification)
-                
-                # Check if there are notifications associated with the target Id and future dates
-                if filtered_notifications:
-                    # Return the list of notifications
-                    return Response(filtered_notifications)
-                else:
-                    return Response({"error": f"No notifications found for the provided Id '{target_id}' and future dates"}, status=404)
+
+            if filtered_notifications:
+                return Response(filtered_notifications)
             else:
-                return Response({"error": "No notifications found"}, status=404)
+                return Response({"error": f"No notifications found for the provided Id '{target_id}' and future dates"}, status=404)
                 
         except requests.exceptions.RequestException as e:
-            # Handle any exceptions (e.g., network errors, invalid responses)
             return Response({"error": str(e)}, status=500)
                 
-    # def retrieve(self, request, subscription_id=None):
-    #     try:
-    #         # Fetch notifications associated with the app ID
-    #         headers = {
-    #             "accept": "application/json",
-    #             "content-type": "application/json",
-    #             "Authorization": f"Basic {REST_API_KEY}"
-    #         }
-    #         url = f"https://onesignal.com/api/v1/notifications?app_id={APP_ID}"
-    #         response = requests.get(url, headers=headers)
-    #         response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
-    #         notifications_data = response.json()
-            
-    #         # Check if notifications are present in the response
-    #         if "notifications" in notifications_data:
-    #             notifications = notifications_data["notifications"]
-                
-    #             # Filter notifications by the provided subscription ID and future appointment dates
-    #             filtered_notifications = []
-    #             current_datetime = datetime.now()
-    #             for notification in notifications:
-    #                 include_player_ids = notification.get("include_player_ids", [])
-    #                 send_after = notification.get("send_after")
-    #                 appointment_date_str = notification.get("data", {}).get("appointment_date")
-    #                 consult_time_str = notification.get("data", {}).get("consult_time")
-    #                 if send_after and appointment_date_str and consult_time_str:
-    #                     notification_datetime = datetime.strptime(f"{appointment_date_str} {consult_time_str}", "%Y-%m-%d %H:%M:%S")
-    #                     if subscription_id in include_player_ids and notification_datetime >= current_datetime:
-    #                         filtered_notifications.append(notification)
-                
-    #             # Check if there are notifications associated with the subscription ID and future dates
-    #             if filtered_notifications:
-    #                 # Return the list of notifications
-    #                 return Response(filtered_notifications)
-    #             else:
-    #                 return Response({"error": "No notifications found for the subscription ID and future dates"}, status=404)
-    #         else:
-    #             return Response({"error": "No notifications found"}, status=404)
-                
-    #     except requests.exceptions.RequestException as e:
-    #         # Handle any exceptions (e.g., network errors, invalid responses)
-    #         return Response({"error": str(e)}, status=500)
-        
-    '''Retrieve notifications associated with the provided external_user ID'''
-
-# class UserNotificationViewset(viewsets.ViewSet):
-#     def list(self, request, user_id=None):
-#         try:
-#             # Fetch notifications associated with the app ID
-#             headers = {
-#                 "accept": "application/json",
-#                 "content-type": "application/json",
-#                 "Authorization": f"Basic {REST_API_KEY}"
-#             }
-#             url = f"https://onesignal.com/api/v1/notifications?app_id={APP_ID}"
-#             response = requests.get(url, headers=headers)
-#             response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
-#             notifications_data = response.json()
-            
-#             # Check if notifications are present in the response
-#             if "notifications" in notifications_data:
-#                 notifications = notifications_data["notifications"]
-                
-#                 # Filter notifications by the provided user ID
-#                 filtered_notifications = []
-#                 for notification in notifications:
-#                     include_external_user_ids = notification.get("include_external_user_ids")
-#                     if include_external_user_ids and user_id in include_external_user_ids:
-#                         filtered_notifications.append(notification)
-                
-#                 # Check if there are notifications associated with the user ID
-#                 if filtered_notifications:
-#                     # Return the list of notifications
-#                     return Response(filtered_notifications)
-#                 else:
-#                     return Response({"error": "No notifications found for the user ID"}, status=404)
-#             else:
-#                 return Response({"error": "No notifications found"}, status=404)
-                
-#         except requests.exceptions.RequestException as e:
-#             # Handle any exceptions (e.g., network errors, invalid responses)
-#             return Response({"error": str(e)}, status=500)
-
-# class ListUserNotification(generics.ListAPIView):
-#     serializer_class = UserNotificationSerializer
-#     permission_classes = [permissions.IsAuthenticated]
-#     authentication_classes = [authentication.TokenAuthentication]   
- 
-#     def get_queryset(self):
-#         user = self.request.user
-#         current_datetime = datetime.now()  # Get the current datetime with both date and time components
-#         print("Current datetime:", current_datetime)
-#         # Filter notifications for the user where appointment_date is present and future dates
-#         queryset = Notification.objects.filter(
-#             Q(user=user) & (Q(appointment__isnull=True) | 
-#                             Q(appointment__date__gt=current_datetime.date()) | 
-#                             (Q(appointment__date=current_datetime.date()) & 
-#                             Q(appointment__consult_time__gte=current_datetime.time()))
-#                         )
-#         ).order_by('-created_at')
-#         return queryset
-    
-#     def get(self, request, *args, **kwargs):
-#         user = request.user
-#         notifications = self.get_queryset()
-#         serializer = UserNotificationSerializer(notifications, many=True)
-#         return Response(serializer.data, status=status.HTTP_200_OK)

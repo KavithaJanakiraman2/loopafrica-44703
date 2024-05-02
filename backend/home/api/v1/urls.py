@@ -15,6 +15,7 @@ from home.api.v1.viewsets import (
     DoctorViewSet,
     ToDoListViewSet,
     ResetPasswordView,
+    ZoomMeetingViewSet,
 )
 
 router = DefaultRouter()
@@ -24,6 +25,8 @@ router.register("feedback", FeedbackViewSet, basename="feedback")
 router.register(r'user-profiles', UserProfileViewSet, basename='user-profiles')
 router.register(r'doctors', DoctorViewSet, basename='doctors')
 router.register(r'todo', ToDoListViewSet, basename='todo-list')
+router.register(r'zoom-meeting', ZoomMeetingViewSet, basename='zoom-meeting')
+# router.register(r'zoom-token', ZoomOAuthTokenView, basename='zoom-token')
 
 urlpatterns = [
     path("", include(router.urls)),

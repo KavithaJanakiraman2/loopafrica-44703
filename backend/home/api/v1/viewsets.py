@@ -1,5 +1,5 @@
 from rest_framework.authtoken.serializers import AuthTokenSerializer
-from rest_framework.viewsets import ModelViewSet, ViewSet
+from rest_framework.viewsets import ModelViewSet, ViewSet, GenericViewSet
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.generics import RetrieveUpdateAPIView, CreateAPIView
@@ -8,19 +8,24 @@ from rest_framework import status, filters
 from rest_framework.mixins import UpdateModelMixin
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
-from users.models import User, Feedback, Appointment, UserProfile, Doctor, ToDoList, LikeDoctor
+from users.models import User, Feedback, Appointment, UserProfile, Doctor, ToDoList, LikeDoctor, Zoom
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
 from django_filters.rest_framework import DjangoFilterBackend
-from datetime import datetime
+from datetime import datetime, time
 from django.db.models import Case, When, Value, IntegerField
 from modules.two_factor_authentication.twofactorauth.utils import Util
 from django.utils import timezone
 import requests
 from modules.django_push_notifications.push_notifications.utils import APP_ID, REST_API_KEY, send_push_notification
 from modules.django_push_notifications.push_notifications.models import Notification
+from requests_oauthlib import OAuth2Session
+from django.shortcuts import redirect
+from rest_framework import viewsets
+from home.api.v1.utils import create_meeting, generate_token
+import os
 import logging
 
 logger = logging.getLogger(__name__)
@@ -317,37 +322,121 @@ class AppointmentViewSet(ModelViewSet):
         if serializer.is_valid():
             # serializer.save()
             appointment = serializer.save()
+            print('appointment',appointment.id,appointment.user.email,appointment.doctor.user.email, appointment.date, appointment.consult_time)
 
-            # prepare email data
-            email_data = {
+            #call generate_token function from utils.py to generate a Zoom OAuth token
+            token = generate_token()
+            print('token',token)
+
+            # Calculate start time dynamically (Example: Start time is appointment date + appointment consult time)
+            start_time = datetime.combine(appointment.date, appointment.consult_time).isoformat()
+
+            
+            # Call create_meeting function from utils.py to create a Zoom meeting with appointment object
+            meeting_response = create_meeting(token=token, topic=appointment.topic, type=2, start_time=start_time, userId=appointment.user.email, appointment=appointment)
+            print('meeting_response',meeting_response)
+
+             # prepare email data for the user
+            user_email_data = {
             'subject' : "Appointment Confirmation",
-            'body' : "Booking successful. Here is the zoom meeting link: <insert link here>",
-            'to_email' : appointment.user.email
+            'body' : f"Booking successful. Here is the zoom meeting link: {meeting_response.join_url}", # here we can add the appointment details in the mail
+            'to_email' : appointment.user.email  #add doctor's email
+             
             }
+            print('user_email_data',user_email_data)
             # Send confirmation email using send_email function from utils.py
-            Util.send_email(email_data)
+            user_mail=Util.send_email(user_email_data)
+            print('user_mail',user_mail)
 
-            # Send push notification
-            try:
-                doctor_name = appointment.doctor.user.username  # Get the full name of the doctor
-                appointment_date = appointment.date.strftime("%Y-%m-%d")
-                appointment_time = appointment.consult_time.strftime("%H:%M:%S")
-                message = f"Consultation with Dr.{doctor_name} on {appointment_date} at {appointment_time}"
-                # Send push notification to the user and capture the response
-                send_push_notification(
-                    [str(appointment.user.id)],
-                    "Appointment",
-                    message,
-                    appointment_time,
-                    appointment_date,
-                    doctor_name
+            #prepare email data for the doctor
+            doctor_email_data = {
+                'subject' : "New Appointment",
+                'body' : f"Booking successful. Here is the zoom meeting link: {meeting_response.join_url}", # here we can add the appointment details in the mail
+                'to_email' : appointment.doctor.user.email  #add doctor's email
+            }
+            print('doctor_email_data',doctor_email_data)
+            doctor_mail=Util.send_email(doctor_email_data)
+            print('doctor_mail',doctor_mail)
+            
+            #convert consult_time to string
+            consult_time_str = appointment.consult_time.strftime('%H:%M:%S')
+            appointment_date_str = appointment.date.strftime('%Y-%m-%d')
+            # call send_push_notification function from utils.py to send push notification to the user
+            notification_id = send_push_notification(
+                [str(appointment.user.id)],
+                message_title="Appointment",
+                message_body="Your appointment has been scheduled successfully",
+                appointment_date=appointment_date_str,
+                consult_time=consult_time_str,
+                doctor_name=appointment.doctor.user.username,
+                zoom_link=meeting_response.join_url,
+                zoom_meeting_id=meeting_response.meeting_id,
+                zoom_passcode=meeting_response.password
+            )
+            # after sending the push notification, save the notification in the database
+            if notification_id:
+                notification = Notification.objects.create(
+                    user=appointment.user,
+                    appointment=appointment,
+                    message="Your appointment has been scheduled successfully. Please check your email for the Zoom meeting link.",
+                    notification_id=notification_id,
+                    Notification_type="push",  # Assuming it's a push notification
+                    title="Appointment",
+                    created_at=timezone.now(),
+                    
+                    
                 )
-            except Exception as e:
-                logger.error(f"Error occurred while sending push notification: {str(e)}")  # Log the error
-            # Handle any exceptions raised during notification sending
-            # Log the error or perform any necessary actions
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+                print("Notification created successfully:", notification)
+            # get the response with both the appointment and meeting details
+            
+            response_data ={
+                'appointment':{
+                    'id':appointment.id,
+                    'user':appointment.user.id,
+                    'doctor':appointment.doctor.user.id,
+                    'date':appointment.date,
+                    'consult_time':appointment.consult_time,
+                    'status':appointment.status,
+                    'feedback':appointment.feedback,
+                    'ratings':appointment.ratings,
+                    'doctor_queries':appointment.doctor_queries,
+                    'health_issue':appointment.health_issue
+
+                },
+                'meeting':{
+                    'meeting_id':meeting_response.meeting_id,
+                    'join_url':meeting_response.join_url,
+                    'passcode':meeting_response.password
+
+                }
+            }
+            return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+                  
+            
+        #     #     # Send push notification to the user and capture the response
+        #     send_push_notification(
+        #         [str(appointment.user.id)],
+        #         "Appointment",
+        #         message,
+        #         appointment_time,
+        #         appointment_date,
+        #         doctor_name,
+        #         zoom_link,
+        #         zoom_meeting_id,
+        #         zoom_passcode
+        #     )
+        # except Zoom.DoesNotExist:
+        #     # Handle the case where no Zoom information is found for the appointment
+        #     logger.error("No Zoom information found for the appointment")
+        # except Exception as e:
+        #     logger.error(f"Error occurred while sending push notification: {str(e)}")  # Log the error
+
+        # # Handle any exceptions raised during notification sending
+        # # Log the error or perform any necessary actions
+        # return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
                 
@@ -760,3 +849,151 @@ class ResetPasswordView(APIView):
                 return Response({"error": "User with this email does not exist"}, status=status.HTTP_404_NOT_FOUND)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+# class ZoomOAuthTokenView(GenericViewSet):
+
+#     @action(methods=['post'], detail=False, url_path='generate_token')
+#     def generate_token(self, request):
+#         # Retrieve the query parameters
+#         account_id = request.query_params.get('account_id')
+#         authorization_token = request.query_params.get('authorization')
+
+#         # Define the request headers
+#         headers = {
+#             'Authorization': f'Bearer {authorization_token}',
+#             'Content-Type': 'application/json',
+#         }
+
+#         # Define the request payload
+#         payload = {
+#             'grant_type': 'account_credentials',
+#             'account_id': account_id,
+#         }
+
+#         # Make the POST request to the Zoom OAuth token endpoint
+#         response = requests.post('https://zoom.us/oauth/token', headers=headers, json=payload)
+
+#         # Check if the request was successful
+#         if response.ok:
+#             # Return the response data
+#             return Response(response.json(), status=status.HTTP_200_OK)
+#         else:
+#             # Return an error response
+#             return Response({'error': response.text}, status=response.status_code)
+                
+class ZoomMeetingViewSet(viewsets.ViewSet):
+    # @action(methods=['post'], detail=False)
+    # def create_meeting(self, request):
+    #     # Get data from request body
+    #     data = request.data
+
+    #     # # Extract appointment_id from data
+    #     # appointment_id = data.get('appointment_id') if data else None
+        
+    #     # Make sure Authorization header is present
+    #     if 'Authorization' not in request.headers:
+    #         return Response({"error": "Authorization header missing"}, status=400)
+
+    #     # Get the token from the Authorization header
+    #     token = request.headers['Authorization'].split()[1]
+
+    #     # Define the headers
+    #     headers = {
+    #         'Content-Type': 'application/json',
+    #         'Accept': 'application/json',
+    #         'Authorization': f'Bearer {token}'
+    #     }
+
+    #     # Make the POST request to create a meeting
+    #     response = requests.post('https://api.zoom.us/v2/users/me/meetings', headers=headers, json=data)
+        
+    #     # Check if the request was successful
+    #     if response.status_code == 201:
+    #         # Extract relevant data from the Zoom API response
+    #         zoom_data = response.json()
+    #         meeting_id = zoom_data.get('id')
+    #         join_url = zoom_data.get('join_url')
+    #         password = zoom_data.get('password')
+
+    #         # Save meeting data to the Zoom table with appointment_id
+    #         zoom_instance = Zoom.objects.create(
+    #             meeting_id=meeting_id,
+    #             join_url=join_url,
+    #             password=password,
+    #         )
+
+    #         return Response(zoom_data, status=status.HTTP_201_CREATED)
+    #     else:
+    #         return Response({"error": "Failed to create meeting"}, status=response.status_code)
+
+    @action(methods=['get'], detail=False)
+    def list_meeting(self, request):
+        # Call generate_token to get the access token
+        token = generate_token()
+        if isinstance(token, Exception):
+            return Response({"error": "Failed to generate token"}, status=500)
+
+        # Define the headers
+        headers = {
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {token}'
+        }
+
+        # Make the GET request to list meetings
+        response = requests.get('https://api.zoom.us/v2/users/me/meetings', headers=headers)
+        
+        # Check if the request was successful
+        if response.status_code == 200:
+            return Response(response.json(), status=response.status_code)
+        else:
+            return Response({"error": "Failed to list meetings"}, status=response.status_code)  
+
+    @action(methods=['get'], detail=False)
+    def view_meeting_details(self, request):
+        # Call generate_token to get the access token
+        token = generate_token()
+        if isinstance(token, Exception):
+            return Response({"error": "Failed to generate token"}, status=500)
+
+        # Define the headers
+        headers = {
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {token}'
+        }
+
+        # Extract the meeting ID from the request URL
+        meeting_id = request.query_params.get('meeting_id')
+
+        # Make the GET request to get meeting details
+        response = requests.get(f'https://api.zoom.us/v2/meetings/{meeting_id}', headers=headers)
+        
+        # Check if the request was successful
+        if response.status_code == 200:
+            return Response(response.json(), status=response.status_code)
+        else:
+            return Response({"error": "Failed to get meeting details"}, status=response.status_code) 
+
+    @action(methods=['delete'], detail=False)
+    def delete_meeting(self, request):
+        # Call generate_token to get the access token
+        token = generate_token()
+        if isinstance(token, Exception):
+            return Response({"error": "Failed to generate token"}, status=500)
+
+        # Define the headers
+        headers = {
+            'Authorization': f'Bearer {token}'
+        }
+
+        # Extract the meeting ID from the request URL
+        meeting_id = request.query_params.get('meeting_id')
+
+        # Make the DELETE request to delete the meeting
+        response = requests.delete(f'https://api.zoom.us/v2/meetings/{meeting_id}', headers=headers)
+        
+        # Check if the request was successful
+        if response.status_code == 204:
+            return Response(status=response.status_code)
+        else:
+            return Response({"error": "Failed to delete meeting"}, status=response.status_code)     
+    
