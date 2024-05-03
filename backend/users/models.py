@@ -361,4 +361,3 @@ class LikeDoctor(models.Model):
  
     def __str__(self):
         return f"{self.favourite} for {self.doctor.user.username} by {self.user.username}"
- 
