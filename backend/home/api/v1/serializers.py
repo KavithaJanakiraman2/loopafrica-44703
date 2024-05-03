@@ -21,6 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from users.models import User, UserProfile, PatientInfo, Doctor, Instructor, Feedback, Appointment, ToDoList, LikeDoctor
 from modules.two_factor_authentication.twofactorauth.utils import Util
 from modules.two_factor_authentication.twofactorauth.models import TwoFactorAuth
+from meeting.zoom.models import Zoom
 
 
 import os
@@ -584,7 +585,13 @@ class FeedbackSerializer(serializers.ModelSerializer):
         model = Feedback
         fields = ['user_id', 'name', 'email', 'subject', 'message', 'replied', 'reply_message']
 
+class ZoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Zoom
+        fields = '__all__'
+
 class AppointmentSerializer(serializers.ModelSerializer):
+    zoom = ZoomSerializer(many=True, read_only=True)
     class Meta:
         model = Appointment
         fields = '__all__'
