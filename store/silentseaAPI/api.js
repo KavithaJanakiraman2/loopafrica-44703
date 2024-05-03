@@ -173,6 +173,24 @@ function api_v1_user_profiles_profile_completion_retrieve(payload) {
 function api_v1_user_profiles_update_profile_create(payload) {
   return silentseaAPI.post(`/api/v1/user-profiles/update_profile/`, payload)
 }
+function meeting_zoom_meeting_list(payload) {
+  return silentseaAPI.get(`/meeting/zoom-meeting/`)
+}
+function meeting_zoom_meeting_create(payload) {
+  return silentseaAPI.post(`/meeting/zoom-meeting/`)
+}
+function meeting_zoom_meeting_retrieve(payload) {
+  return silentseaAPI.get(`/meeting/zoom-meeting/${payload.id}/`)
+}
+function meeting_zoom_meeting_update(payload) {
+  return silentseaAPI.put(`/meeting/zoom-meeting/${payload.id}/`)
+}
+function meeting_zoom_meeting_partial_update(payload) {
+  return silentseaAPI.patch(`/meeting/zoom-meeting/${payload.id}/`)
+}
+function meeting_zoom_meeting_destroy(payload) {
+  return silentseaAPI.delete(`/meeting/zoom-meeting/${payload.id}/`)
+}
 function modules_contact_us_contact_us_create(payload) {
   return silentseaAPI.post(`/modules/contact-us/contact_us/`)
 }
@@ -628,6 +646,12 @@ export const apiService = {
   api_v1_user_profiles_profile_retrieve,
   api_v1_user_profiles_profile_completion_retrieve,
   api_v1_user_profiles_update_profile_create,
+  meeting_zoom_meeting_list,
+  meeting_zoom_meeting_create,
+  meeting_zoom_meeting_retrieve,
+  meeting_zoom_meeting_update,
+  meeting_zoom_meeting_partial_update,
+  meeting_zoom_meeting_destroy,
   modules_contact_us_contact_us_create,
   modules_inventory_management_category_list,
   modules_inventory_management_category_create,
