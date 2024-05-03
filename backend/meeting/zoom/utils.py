@@ -42,10 +42,7 @@ def call_zoom_api(topic, type, start_time, userId, appointment):
     try:
         zoom_credentials = ZoomToken.objects.first()
         if zoom_credentials.token:
-            token = zoom_credentials.token
-        else:
-            token, expiry = generate_token()
-            call_zoom_api(topic, type, start_time, userId, appointment)
+            token = zoom_credentials.token            
 
         # Define the headers
         headers = {
@@ -75,7 +72,7 @@ def call_zoom_api(topic, type, start_time, userId, appointment):
             }
         }
         # make the post request to create a meeting
-        response = requests.post('https://api.zoom.us/v2/users/me/meetings', headers=headers, json=data, params=params)        
+        response = requests.post('https://api.zoom.us/v2/users/me/meetings', headers=headers, json=data, params=params)                
         # check if the request was successful
         if response.status_code == 201:
             # extract relevant data from the Zoom API response
@@ -90,9 +87,14 @@ def call_zoom_api(topic, type, start_time, userId, appointment):
                 join_url=join_url,
                 password=password,
             )
+
             return zoom_instance
-    
-    except Exception as e:
+        else:
+            token, expiry = generate_token()
+            call_zoom_api(topic, type, start_time, userId, appointment)
+    except Exception as e:       
+        token, expiry = generate_token()
+        call_zoom_api(topic, type, start_time, userId, appointment)
         return e
     
 def create_meeting(topic, type, start_time, userId, appointment):
