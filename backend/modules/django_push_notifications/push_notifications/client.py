@@ -59,7 +59,7 @@ class Client:
         }
 
         payload = {
-            "app_id": "YOUR_APP_ID",
+            "app_id": self.app_id,
             "include_external_user_ids": [external_id],
             "contents": {"en": message}
         }
