@@ -202,7 +202,7 @@ class TestResultUploadViewSet(ModelViewSet):
         - A Response object with the serialized data of all test results.
         """
         queryset = TestResult.objects.all()
-        serializer = TestResultUploadSerializer(queryset, many=True)
+        serializer = TestResultUploadSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
     
     def delete(self, request, *args, **kwargs):

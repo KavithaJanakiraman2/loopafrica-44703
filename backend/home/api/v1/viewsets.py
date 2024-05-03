@@ -1,3 +1,5 @@
+import os
+import requests
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.viewsets import ModelViewSet, ViewSet
 from rest_framework.authtoken.models import Token
@@ -15,8 +17,15 @@ from django.shortcuts import get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from datetime import datetime
+from django.utils import timezone
 from django.db.models import Case, When, Value, IntegerField
+from meeting.zoom.utils import create_meeting, generate_token
+from modules.two_factor_authentication.twofactorauth.utils import Util
+from modules.django_push_notifications.push_notifications.models import Notification
+from home.api.v1.utils import send_push_notification
 
+APP_ID = os.environ.get('ONESIGNAL_APP_ID')
+REST_API_KEY = os.environ.get('ONESIGNAL_REST_API_KEY')
 
 from home.api.v1.serializers import (
     SignupSerializer,
@@ -62,11 +71,12 @@ class SignUpWithEmailView(CreateAPIView):
         user_serializer = UserSerializer(user)
         return Response({"token": token.key, "user": user_serializer.data})
 
+#This is the loginviewset to register and subscribe user to onesignal.
 class LoginViewSet(ViewSet):
     """Based on rest_framework.authtoken.views.ObtainAuthToken"""
-
+ 
     serializer_class = AuthTokenSerializer
-
+ 
     def create(self, request):
         serializer = self.serializer_class(
             data=request.data, context={"request": request}
@@ -74,7 +84,55 @@ class LoginViewSet(ViewSet):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
         token, created = Token.objects.get_or_create(user=user)
+        
+        try:
+            user_id = user.id
+            headers = {
+                "accept": "application/json",
+                "content-type": "application/json",
+                "Authorization": f"Basic {REST_API_KEY}"
+            }
+ 
+            # Check if the user is already subscribed
+            url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{user_id}"
+            response = requests.get(url, headers=headers)
+            data = response.json()
+            if data.get('id'):
+                # User is already subscribed, no need to subscribe again
+                pass
+            else:
+                # Register the user with OneSignal
+                url = f"https://api.onesignal.com/apps/{APP_ID}/users"
+                user_payload = {
+                    "identity": { "external_id": f"{user_id}" }
+                }
+                user_response = requests.post(url, json=user_payload, headers=headers)
+                # Subscribe the user to Android push notifications
+                android_sub_payload = {
+                    "subscription": {
+                        "type": "AndroidPush",
+                        "enabled": True,
+                        "token": str(user_id)  # Using user's ID as token
+                    }
+                }
+                android_sub_url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{user_id}/subscriptions"
+                android_sub_response = requests.post(android_sub_url, json=android_sub_payload, headers=headers)
+                # Subscribe the user to iOS push notifications
+                ios_sub_payload = {
+                    "subscription": {
+                        "type": "iOSPush",
+                        "enabled": True,
+                        "token": str(user_id)  # Using user's ID as token
+                    }
+                }
+                ios_sub_url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{user_id}/subscriptions"
+                ios_sub_response = requests.post(ios_sub_url, json=ios_sub_payload, headers=headers)
+        except Exception as e:
+            print(e)  # Handle errors, e.g., log them
+            pass
+ 
         user_serializer = UserSerializer(user)
+ 
         return Response({"token": token.key, "user": user_serializer.data})
     
 class EditUserView(RetrieveUpdateAPIView, UpdateModelMixin):
@@ -228,7 +286,7 @@ class FeedbackViewSet(ModelViewSet):
 class AppointmentViewSet(ModelViewSet):
     """
     A viewset for managing appointments.
-
+ 
     This viewset provides the following actions:
     - create: Create a new appointment.
     - retrieve: Retrieve a specific appointment by ID.
@@ -236,26 +294,111 @@ class AppointmentViewSet(ModelViewSet):
     - update_feedback: Update the feedback and ratings for an appointment.
     - todo_appointments: Get the list of appointments for a specific user on the current day.
     """
-
+ 
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
     permission_classes = [IsAuthenticated]
-
+ 
     def create(self, request):
         """
         Create a new appointment.
-
+ 
         Parameters:
         - request: The HTTP request object.
-
+ 
         Returns:
         - If the appointment is created successfully, returns the serialized appointment data with HTTP status 201.
         - If the appointment data is invalid, returns the validation errors with HTTP status 400.
         """
         serializer = AppointmentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # serializer.save()
+            appointment = serializer.save()
+ 
+            # Calculate start time dynamically (Example: Start time is appointment date + appointment consult time)
+            start_time = datetime.combine(appointment.date, appointment.consult_time).isoformat()
+ 
+            # Call create_meeting function from utils.py to create a Zoom meeting with appointment object
+            meeting_response = create_meeting(topic="Consultation", type=2, start_time=start_time, userId=appointment.user.email, appointment=appointment)
+            if meeting_response:                
+                body_data=""
+                if meeting_response.join_url:
+                    body_data +=f"Booking successful. Here is the zoom meeting link: {meeting_response.join_url}\nMeeting ID: {meeting_response.meeting_id}\nPasscode: {meeting_response.password}"
+                   
+                    # If the meeting is created successfully, send confirmation email to the user and doctor
+ 
+                    # prepare email data for the user
+                    user_email_data = {
+                    'subject' : "Appointment Confirmation",
+                    'body' : body_data, # here we can add the appointment details in the mail
+                    'to_email' : appointment.user.email  #add doctor's email
+                   
+                    }
+                    # Send confirmation email using send_email function from utils.py
+                    user_mail=Util.send_email(user_email_data)                    
+       
+                    #prepare email data for the doctor
+                    doctor_email_data = {
+                        'subject' : "New Appointment",
+                        'body' : body_data, # here we can add the appointment details in the mail
+                        'to_email' : appointment.doctor.user.email  #add doctor's email
+                    }
+                    
+                    doctor_mail=Util.send_email(doctor_email_data)
+                    
+                else:
+                    return Response({"error": "Zoom meeting details n"}, status=status.HTTP_400_BAD_REQUEST)
+           
+            #convert consult_time to string
+            consult_time_str = appointment.consult_time.strftime('%H:%M:%S')
+            appointment_date_str = appointment.date.strftime('%Y-%m-%d')
+            # call send_push_notification function from utils.py to send push notification to the user
+            
+            notification_id = send_push_notification(
+                [str(appointment.user.id)],
+                message_title="Appointment",
+                message_body="Your appointment has been scheduled successfully",
+                appointment_date=appointment_date_str,
+                consult_time=consult_time_str,
+                doctor_name=appointment.doctor.user.username,
+                zoom_link=meeting_response.join_url,
+                zoom_meeting_id=meeting_response.meeting_id,
+                zoom_passcode=meeting_response.password
+            )
+            # after sending the push notification, save the notification in the database
+            if notification_id:
+                notification = Notification.objects.create(
+                    user=appointment.user,
+                    appointment=appointment,
+                    message="Your appointment has been scheduled successfully. Please check your email for the Zoom meeting link.",
+                    notification_id=notification_id,
+                    Notification_type="push",  # Assuming it's a push notification
+                    title="Appointment",
+                    created_at=timezone.now(),
+                )
+                print("Notification created successfully:", notification)
+            # get the response with both the appointment and meeting details
+           
+            response_data ={
+                'appointment':{
+                    'id':appointment.id,
+                    'user':appointment.user.id,
+                    'doctor':appointment.doctor.user.id,
+                    'date':appointment.date,
+                    'consult_time':appointment.consult_time,
+                    'status':appointment.status,
+                    'feedback':appointment.feedback,
+                    'ratings':appointment.ratings,
+                    'doctor_queries':appointment.doctor_queries,
+                    'health_issue':appointment.health_issue
+                },
+                'meeting':{
+                    'meeting_id':meeting_response.meeting_id,
+                    'join_url':meeting_response.join_url,
+                    'passcode':meeting_response.password
+                }
+            }
+            return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
  
     def retrieve(self, request, pk=None):
