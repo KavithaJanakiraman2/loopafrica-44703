@@ -321,6 +321,7 @@ class AppointmentViewSet(ModelViewSet):
  
             # Call create_meeting function from utils.py to create a Zoom meeting with appointment object
             meeting_response = create_meeting(topic="Consultation", type=2, start_time=start_time, userId=appointment.user.email, appointment=appointment)
+            print(f"Meeting response: {meeting_response}")
             if meeting_response:                
                 body_data=""
                 if meeting_response.join_url:

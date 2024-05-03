@@ -591,10 +591,10 @@ class ZoomSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class AppointmentSerializer(serializers.ModelSerializer):
-    zoom = ZoomSerializer(many=True, read_only=True)
+    zoom = ZoomSerializer(many=True, required=False, allow_null=True, read_only=True, source='zoom_appointment')
     class Meta:
         model = Appointment
-        fields = '__all__'
+        fields = "__all__"
 
 class UserProListSerializer(serializers.ModelSerializer):
     user = UserSerializer()
