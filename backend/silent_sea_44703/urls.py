@@ -37,6 +37,7 @@ urlpatterns = [
     path("rest-auth/registration/account-confirm-email/<str:key>/", confirm_email),
     #path("rest-auth/registration/", include("dj_rest_auth.registration.urls")),
     path("rest-auth/registration/", include("rest_auth.registration.urls")),    
+    path("meeting/", include("meeting.zoom.urls")),
     #path('paystack/', include('paystack.urls')),
 ]
 

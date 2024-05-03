@@ -257,7 +257,7 @@ class AppointmentViewSet(ModelViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+ 
     def retrieve(self, request, pk=None):
         """
         Retrieve a specific appointment by ID.
