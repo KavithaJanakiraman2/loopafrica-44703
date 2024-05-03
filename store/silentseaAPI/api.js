@@ -448,24 +448,6 @@ function patient_medical_records_partial_update(payload) {
 function patient_medical_records_destroy(payload) {
   return silentseaAPI.delete(`/patient/medical_records/${payload.id}/`)
 }
-function patient_patient_list(payload) {
-  return silentseaAPI.get(`/patient/patient/`)
-}
-function patient_patient_create(payload) {
-  return silentseaAPI.post(`/patient/patient/`, payload)
-}
-function patient_patient_retrieve(payload) {
-  return silentseaAPI.get(`/patient/patient/${payload.id}/`)
-}
-function patient_patient_update(payload) {
-  return silentseaAPI.put(`/patient/patient/${payload.id}/`, payload)
-}
-function patient_patient_partial_update(payload) {
-  return silentseaAPI.patch(`/patient/patient/${payload.id}/`, payload)
-}
-function patient_patient_destroy(payload) {
-  return silentseaAPI.delete(`/patient/patient/${payload.id}/`)
-}
 function patient_prescriptions_list(payload) {
   return silentseaAPI.get(`/patient/prescriptions/`)
 }
@@ -713,12 +695,6 @@ export const apiService = {
   patient_medical_records_update,
   patient_medical_records_partial_update,
   patient_medical_records_destroy,
-  patient_patient_list,
-  patient_patient_create,
-  patient_patient_retrieve,
-  patient_patient_update,
-  patient_patient_partial_update,
-  patient_patient_destroy,
   patient_prescriptions_list,
   patient_prescriptions_create,
   patient_prescriptions_retrieve,
