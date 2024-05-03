@@ -11,6 +11,7 @@ from rest_framework.mixins import UpdateModelMixin
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from users.models import User, Feedback, Appointment, UserProfile, Doctor, ToDoList, LikeDoctor
+from meeting.zoom.models import Zoom
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
@@ -375,8 +376,7 @@ class AppointmentViewSet(ModelViewSet):
                     Notification_type="push",  # Assuming it's a push notification
                     title="Appointment",
                     created_at=timezone.now(),
-                )
-                print("Notification created successfully:", notification)
+                )                
             # get the response with both the appointment and meeting details
            
             response_data ={
@@ -427,8 +427,15 @@ class AppointmentViewSet(ModelViewSet):
         Returns:
         - Returns the serialized data of all appointments with HTTP status 200.
         """
-        queryset = self.get_queryset()
-        serializer = AppointmentSerializer(queryset, many=True)
+        # Filter the queryset based on the authenticated user
+        appointments_queryset = self.get_queryset().filter(user=request.user)
+        print(f"Appointments queryset: {appointments_queryset.first()}")
+
+        # Filter Zoom objects associated with the filtered appointments
+        zooms_queryset = Zoom.objects.filter(appointment__in=appointments_queryset)
+        print(f"Zooms queryset: {zooms_queryset.first()}")
+
+        serializer = AppointmentSerializer(appointments_queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['patch'])

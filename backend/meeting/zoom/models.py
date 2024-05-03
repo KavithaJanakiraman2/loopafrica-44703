@@ -8,7 +8,6 @@ from django.db.models.signals import post_save
 from django.utils import timezone
 from users.models import User, Doctor, Appointment
 
-
 class Zoom(models.Model):
     """
     Represents a Zoom meeting.
