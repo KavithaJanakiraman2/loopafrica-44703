@@ -27,10 +27,7 @@ def generate_token():
         print("encoded_auth", encoded_auth)
         # Define the headers
         headers = {
-            # 'Content-Type': 'application/json',
-            # 'Accept': 'application/json',
-            # in authorization im passing as Basic bXNyRjltUGhRUjVXQzBGckxidzptbERVanlYQ0I0VDNKb3FqR0p0OHpNeDRKeW55eUlKTQ==
-            'Authorization': f'Basic {encoded_auth}'
+                    'Authorization': f'Basic {encoded_auth}'
         }
         # Define the params to be sent to the Zoom API
         params = {

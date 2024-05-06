@@ -1,10 +1,10 @@
 import os
 import requests
 import json
-
+ 
 APP_ID = os.environ.get('APP_ID')
 REST_API_KEY = os.environ.get('REST_API_KEY')
-
+ 
 def send_push_notification(ids,message_title,message_body, consult_time, appointment_date, doctor_name, zoom_link, zoom_meeting_id, zoom_passcode):
     headers = {
                 "accept": "application/json",
@@ -55,7 +55,7 @@ def send_push_notification(ids,message_title,message_body, consult_time, appoint
         res = requests.post(url, json=data, headers=headers)
         print("RES",res)
         var = res.json()
-        #extract notification id from the response 
+        #extract notification id from the response
         notification_id = var.get('id')
         print("PUSH RESPONSE",var)
         return notification_id
