@@ -592,9 +592,18 @@ class ZoomSerializer(serializers.ModelSerializer):
 
 class AppointmentSerializer(serializers.ModelSerializer):
     zoom = ZoomSerializer(many=True, required=False, allow_null=True, read_only=True, source='zoom_appointment')
+    doctor_name = serializers.SerializerMethodField()
+    specialization = serializers.SerializerMethodField()
+
     class Meta:
         model = Appointment
-        fields = "__all__"
+        fields = '__all__'
+
+    def get_doctor_name(self, obj):        
+        return obj.doctor.user.name if obj.doctor else None
+
+    def get_specialization(self, obj):
+        return obj.doctor.specialized if obj.doctor else None
 
 class UserProListSerializer(serializers.ModelSerializer):
     user = UserSerializer()
