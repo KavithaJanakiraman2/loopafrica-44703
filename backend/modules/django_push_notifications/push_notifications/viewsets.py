@@ -32,10 +32,11 @@ class NotificationViewSet(viewsets.ViewSet):
             #client = Client(serializer.validated_data['app_id'], serializer.validated_data['rest_api_key'])
             notification_content = {
                 "included_segments": serializer.validated_data['included_segments'],
+                "include_aliases": request.data.get('include_aliases', False),
+                "target_channel": request.data.get('target_channel', None),
                 "data": serializer.validated_data['data'],
                 "contents": serializer.validated_data['contents']
             }
-            #client.create_notification(notification_content)
             headers = {"Content-Type": request.headers['Content-Type'], "Authorization": request.headers['Authorization'], "Accept": request.headers['Accept']}
             response = requests.post("https://onesignal.com/api/v1/notifications/", headers=headers, data=json.dumps(request.data))
             return Response({"message": "Notification created", "response": response.json()})

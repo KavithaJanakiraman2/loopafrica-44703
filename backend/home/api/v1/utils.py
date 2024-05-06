@@ -1,107 +1,56 @@
-from rest_framework.response import Response
-from rest_framework import status
-import requests
-from users.models import Zoom
-from datetime import datetime, timedelta
 import os
-import base64
-#call zoom api to create meeting
-
-client_id = os.environ.get('CLIENT_ID')
-client_secret = os.environ.get('CLIENT_SECRET')
-account_id = os.environ.get('ACCOUNT_ID')
-
-# Global variable to store the token and its expiration time
-current_token = None
-token_expiry = None
-
-def generate_token():
-    global current_token, token_expiry
-    # check if the token exists and is not expired
-    if current_token and token_expiry > datetime.now():
-        return current_token
-    try:
-        auth = f'{client_id}:{client_secret}'
-        # encode the client_id and client_secret to base64
-        encoded_auth = base64.b64encode(auth.encode('utf-8')).decode('utf-8')
-        print("encoded_auth", encoded_auth)
-        # Define the headers
-        headers = {
-                    'Authorization': f'Basic {encoded_auth}'
-        }
-        # Define the params to be sent to the Zoom API
-        params = {
-            "grant_type": "account_credentials", 
-            "account_id": account_id
-        }
-        # make the post request to create a meeting
-        response = requests.post('https://zoom.us/oauth/token', headers=headers, params=params)
-        print("response", response)
-        # check if the request was successful
-        if response.status_code == 200:
-            # extract relevant data from the Zoom API response
-            token_data = response.json()
-            current_token = token_data.get('access_token')
-            # Set token expiry time (e.g., 1 hour from now)
-            token_expiry = datetime.now() + timedelta(hours=1)
-            return current_token
-    except Exception as e:
-        print("error", e)
-        return e
-
-
-def create_meeting(topic, type, start_time, appointment, token, userId):
-    try:
-        # Define the headers
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': f'Bearer {token}'
-        }
-        # define params
-        params = {
-            "userId": userId
-        }
-
-        # Define the data to be sent to the Zoom API
-        data = {
-            "topic": topic,
-            "type": type,
-            "start_time": start_time,
-            "settings": {
-                "host_video": True,
-                "participant_video": True,
-                "join_before_host": True,
-                "mute_upon_entry": True,
-                "watermark": False,
-                "audio": "voip",
-                "auto_recording": "none",
-                "waiting_room": False
+import requests
+import json
+ 
+APP_ID = os.environ.get('ONESIGNAL_APP_ID')
+REST_API_KEY = os.environ.get('ONESIGNAL_REST_API_KEY')
+ 
+def send_push_notification(ids,message_title,message_body, consult_time, appointment_date, doctor_name, zoom_link, zoom_meeting_id, zoom_passcode):
+    headers = {
+                "accept": "application/json",
+                "content-type": "application/json",
+                "Authorization": f"Basic {REST_API_KEY}"
             }
-        }
-        # make the post request to create a meeting
-        response = requests.post('https://api.zoom.us/v2/users/me/meetings', headers=headers, json=data, params=params)
-        print("response", response)
-        # check if the request was successful
-        if response.status_code == 201:
-            # extract relevant data from the Zoom API response
-            zoom_data = response.json()
-            meeting_id = zoom_data.get('id')
-            join_url = zoom_data.get('join_url')
-            password = zoom_data.get('password')
-            # save meeting data to the Zoom table with appointment_id
-            zoom_instance = Zoom.objects.create(
-                appointment_id=appointment.id,
-                meeting_id=meeting_id,
-                join_url=join_url,
-                password=password,
-            )
-            return zoom_instance
+    try:
+        subscription_ids = []
+        external_user_ids=[]
+        for id in ids:  
+            url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{id}"
+            response = requests.get(url, headers=headers)
+            data = response.json()
+            
+            if data.get('subscriptions',None):
+                subscription_ids.extend( item["id"] for item in data['subscriptions'])
+                external_user_ids.append(str(id)) # append external user id
+        if not subscription_ids:
+            return
+        data = {
+            "app_id": APP_ID,
+            "include_external_user_ids": external_user_ids, # include external user id
+            "include_player_ids": [sub_id for sub_id in subscription_ids],
+            "target_channel": "push",
+            "data": {
+                 "message": message_body,
+                 "doctor_name": doctor_name,
+                 "consult_time":consult_time,
+                 "appointment_date":appointment_date,
+                 "zoom_link":zoom_link,
+                 "zoom_meeting_id":zoom_meeting_id,
+                 "zoom_passcode":zoom_passcode
+            },
+            "contents": {"en": message_title}
+            }
+        url = "https://onesignal.com/api/v1/notifications"
+        headers = {
+                "accept": "application/json",
+                "content-type": "application/json",
+                "Authorization": f"Basic {REST_API_KEY}"
+            }
+        res = requests.post(url, json=data, headers=headers)
+        var = res.json()
+        #extract notification id from the response
+        notification_id = var.get('id')
         
+        return notification_id
     except Exception as e:
-        return e    
-
-
-    
-
-
+            print(e)

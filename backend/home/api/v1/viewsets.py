@@ -1,3 +1,5 @@
+import os
+import requests
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.viewsets import ModelViewSet, ViewSet, GenericViewSet
 from rest_framework.authtoken.models import Token
@@ -8,12 +10,18 @@ from rest_framework import status, filters
 from rest_framework.mixins import UpdateModelMixin
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
+<<<<<<< HEAD
 from users.models import User, Feedback, Appointment, UserProfile, Doctor, ToDoList, LikeDoctor, Zoom
+=======
+from users.models import User, Feedback, Appointment, UserProfile, Doctor, ToDoList, LikeDoctor
+from meeting.zoom.models import Zoom
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
 from django_filters.rest_framework import DjangoFilterBackend
+<<<<<<< HEAD
 from datetime import datetime, time
 from django.db.models import Case, When, Value, IntegerField
 from modules.two_factor_authentication.twofactorauth.utils import Util
@@ -29,6 +37,18 @@ import os
 import logging
 
 logger = logging.getLogger(__name__)
+=======
+from datetime import datetime
+from django.utils import timezone
+from django.db.models import Case, When, Value, IntegerField
+from meeting.zoom.utils import create_meeting, generate_token
+from modules.two_factor_authentication.twofactorauth.utils import Util
+from modules.django_push_notifications.push_notifications.models import Notification
+from home.api.v1.utils import send_push_notification
+
+APP_ID = os.environ.get('ONESIGNAL_APP_ID')
+REST_API_KEY = os.environ.get('ONESIGNAL_REST_API_KEY')
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
 
 from home.api.v1.serializers import (
     SignupSerializer,
@@ -73,13 +93,18 @@ class SignUpWithEmailView(CreateAPIView):
         token, created = Token.objects.get_or_create(user=user)
         user_serializer = UserSerializer(user)
         return Response({"token": token.key, "user": user_serializer.data})
+<<<<<<< HEAD
  
                 
+=======
+
+#This is the loginviewset to register and subscribe user to onesignal.
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
 class LoginViewSet(ViewSet):
     """Based on rest_framework.authtoken.views.ObtainAuthToken"""
-
+ 
     serializer_class = AuthTokenSerializer
-
+ 
     def create(self, request):
         serializer = self.serializer_class(
             data=request.data, context={"request": request}
@@ -87,9 +112,13 @@ class LoginViewSet(ViewSet):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
         token, created = Token.objects.get_or_create(user=user)
+<<<<<<< HEAD
         # user_serializer = UserSerializer(user)
         # return Response({"token": token.key, "user": user_serializer.data})
         # Register and subscribe user to OneSignal push notifications
+=======
+        
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
         try:
             user_id = user.id
             headers = {
@@ -102,7 +131,10 @@ class LoginViewSet(ViewSet):
             url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{user_id}"
             response = requests.get(url, headers=headers)
             data = response.json()
+<<<<<<< HEAD
  
+=======
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
             if data.get('id'):
                 # User is already subscribed, no need to subscribe again
                 pass
@@ -113,7 +145,10 @@ class LoginViewSet(ViewSet):
                     "identity": { "external_id": f"{user_id}" }
                 }
                 user_response = requests.post(url, json=user_payload, headers=headers)
+<<<<<<< HEAD
                
+=======
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
                 # Subscribe the user to Android push notifications
                 android_sub_payload = {
                     "subscription": {
@@ -124,7 +159,10 @@ class LoginViewSet(ViewSet):
                 }
                 android_sub_url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{user_id}/subscriptions"
                 android_sub_response = requests.post(android_sub_url, json=android_sub_payload, headers=headers)
+<<<<<<< HEAD
  
+=======
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
                 # Subscribe the user to iOS push notifications
                 ios_sub_payload = {
                     "subscription": {
@@ -135,9 +173,15 @@ class LoginViewSet(ViewSet):
                 }
                 ios_sub_url = f"https://api.onesignal.com/apps/{APP_ID}/users/by/external_id/{user_id}/subscriptions"
                 ios_sub_response = requests.post(ios_sub_url, json=ios_sub_payload, headers=headers)
+<<<<<<< HEAD
  
         except Exception as e:
             print(e)  # Handle errors, e.g., log them
+=======
+        except Exception as e:
+            print(e)  # Handle errors, e.g., log them
+            pass
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
  
         user_serializer = UserSerializer(user)
  
@@ -323,24 +367,37 @@ class AppointmentViewSet(ModelViewSet):
         if serializer.is_valid():
             # serializer.save()
             appointment = serializer.save()
+<<<<<<< HEAD
             print('appointment',appointment.id,appointment.user.email,appointment.doctor.user.email, appointment.date, appointment.consult_time)
  
             #call generate_token function from utils.py to generate a Zoom OAuth token
             token = generate_token()
             print('token',token)
+=======
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
  
             # Calculate start time dynamically (Example: Start time is appointment date + appointment consult time)
             start_time = datetime.combine(appointment.date, appointment.consult_time).isoformat()
  
+<<<<<<< HEAD
            
             # Call create_meeting function from utils.py to create a Zoom meeting with appointment object
             meeting_response = create_meeting(token=token, topic=appointment.topic, type=2, start_time=start_time, userId=appointment.user.email, appointment=appointment)
             print('meeting_response',meeting_response)
+=======
+            # Call create_meeting function from utils.py to create a Zoom meeting with appointment object
+            meeting_response = create_meeting(topic="Consultation", type=2, start_time=start_time, userId=appointment.user.email, appointment=appointment)
+            print(f"Meeting response: {meeting_response}")
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
             if meeting_response:                
                 body_data=""
                 if meeting_response.join_url:
                     body_data +=f"Booking successful. Here is the zoom meeting link: {meeting_response.join_url}\nMeeting ID: {meeting_response.meeting_id}\nPasscode: {meeting_response.password}"
+<<<<<<< HEAD
                     
+=======
+                   
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
                     # If the meeting is created successfully, send confirmation email to the user and doctor
  
                     # prepare email data for the user
@@ -348,6 +405,7 @@ class AppointmentViewSet(ModelViewSet):
                     'subject' : "Appointment Confirmation",
                     'body' : body_data, # here we can add the appointment details in the mail
                     'to_email' : appointment.user.email  #add doctor's email
+<<<<<<< HEAD
                     
                     }
                     print('user_email_data',user_email_data)
@@ -355,15 +413,28 @@ class AppointmentViewSet(ModelViewSet):
                     user_mail=Util.send_email(user_email_data)
                     print('user_mail',user_mail)
         
+=======
+                   
+                    }
+                    # Send confirmation email using send_email function from utils.py
+                    user_mail=Util.send_email(user_email_data)                    
+       
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
                     #prepare email data for the doctor
                     doctor_email_data = {
                         'subject' : "New Appointment",
                         'body' : body_data, # here we can add the appointment details in the mail
                         'to_email' : appointment.doctor.user.email  #add doctor's email
                     }
+<<<<<<< HEAD
                     print('doctor_email_data',doctor_email_data)
                     doctor_mail=Util.send_email(doctor_email_data)
                     print('doctor_mail',doctor_mail)
+=======
+                    
+                    doctor_mail=Util.send_email(doctor_email_data)
+                    
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
                 else:
                     return Response({"error": "Zoom meeting details n"}, status=status.HTTP_400_BAD_REQUEST)
            
@@ -371,6 +442,10 @@ class AppointmentViewSet(ModelViewSet):
             consult_time_str = appointment.consult_time.strftime('%H:%M:%S')
             appointment_date_str = appointment.date.strftime('%Y-%m-%d')
             # call send_push_notification function from utils.py to send push notification to the user
+<<<<<<< HEAD
+=======
+            
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
             notification_id = send_push_notification(
                 [str(appointment.user.id)],
                 message_title="Appointment",
@@ -392,10 +467,14 @@ class AppointmentViewSet(ModelViewSet):
                     Notification_type="push",  # Assuming it's a push notification
                     title="Appointment",
                     created_at=timezone.now(),
+<<<<<<< HEAD
                    
                    
                 )
                 print("Notification created successfully:", notification)
+=======
+                )                
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
             # get the response with both the appointment and meeting details
            
             response_data ={
@@ -410,17 +489,24 @@ class AppointmentViewSet(ModelViewSet):
                     'ratings':appointment.ratings,
                     'doctor_queries':appointment.doctor_queries,
                     'health_issue':appointment.health_issue
+<<<<<<< HEAD
  
+=======
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
                 },
                 'meeting':{
                     'meeting_id':meeting_response.meeting_id,
                     'join_url':meeting_response.join_url,
                     'passcode':meeting_response.password
+<<<<<<< HEAD
  
+=======
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
                 }
             }
             return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+<<<<<<< HEAD
 
                   
             
@@ -448,6 +534,9 @@ class AppointmentViewSet(ModelViewSet):
 
 
                 
+=======
+ 
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225
     def retrieve(self, request, pk=None):
         """
         Retrieve a specific appointment by ID.
@@ -474,8 +563,15 @@ class AppointmentViewSet(ModelViewSet):
         Returns:
         - Returns the serialized data of all appointments with HTTP status 200.
         """
-        queryset = self.get_queryset()
-        serializer = AppointmentSerializer(queryset, many=True)
+        # Filter the queryset based on the authenticated user
+        appointments_queryset = self.get_queryset().filter(user=request.user)
+        print(f"Appointments queryset: {appointments_queryset.first()}")
+
+        # Filter Zoom objects associated with the filtered appointments
+        zooms_queryset = Zoom.objects.filter(appointment__in=appointments_queryset)
+        print(f"Zooms queryset: {zooms_queryset.first()}")
+
+        serializer = AppointmentSerializer(appointments_queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['patch'])
@@ -859,6 +955,7 @@ class ResetPasswordView(APIView):
                 return Response({"error": "User with this email does not exist"}, status=status.HTTP_404_NOT_FOUND)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+<<<<<<< HEAD
         
 # class ZoomOAuthTokenView(GenericViewSet):
 
@@ -1007,3 +1104,5 @@ class ZoomMeetingViewSet(viewsets.ViewSet):
         else:
             return Response({"error": "Failed to delete meeting"}, status=response.status_code)     
     
+=======
+>>>>>>> 70e471c22ee725a59428183ffe88ce7dc0a18225

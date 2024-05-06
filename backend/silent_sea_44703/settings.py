@@ -86,7 +86,7 @@ LOCAL_APPS = [
     'hospital_operations.pharmacy',
     'hospital_operations.emr',    
     'modules.two_factor_authentication.twofactorauth',
-    'payment_gateway.subscriptions',
+    'meeting.zoom',
 ]
 THIRD_PARTY_APPS = [
     'rest_framework',

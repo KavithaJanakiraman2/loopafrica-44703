@@ -173,6 +173,24 @@ function api_v1_user_profiles_profile_completion_retrieve(payload) {
 function api_v1_user_profiles_update_profile_create(payload) {
   return silentseaAPI.post(`/api/v1/user-profiles/update_profile/`, payload)
 }
+function meeting_zoom_meeting_list(payload) {
+  return silentseaAPI.get(`/meeting/zoom-meeting/`)
+}
+function meeting_zoom_meeting_create(payload) {
+  return silentseaAPI.post(`/meeting/zoom-meeting/`)
+}
+function meeting_zoom_meeting_retrieve(payload) {
+  return silentseaAPI.get(`/meeting/zoom-meeting/${payload.id}/`)
+}
+function meeting_zoom_meeting_update(payload) {
+  return silentseaAPI.put(`/meeting/zoom-meeting/${payload.id}/`)
+}
+function meeting_zoom_meeting_partial_update(payload) {
+  return silentseaAPI.patch(`/meeting/zoom-meeting/${payload.id}/`)
+}
+function meeting_zoom_meeting_destroy(payload) {
+  return silentseaAPI.delete(`/meeting/zoom-meeting/${payload.id}/`)
+}
 function modules_contact_us_contact_us_create(payload) {
   return silentseaAPI.post(`/modules/contact-us/contact_us/`)
 }
@@ -430,24 +448,6 @@ function patient_medical_records_partial_update(payload) {
 function patient_medical_records_destroy(payload) {
   return silentseaAPI.delete(`/patient/medical_records/${payload.id}/`)
 }
-function patient_patient_list(payload) {
-  return silentseaAPI.get(`/patient/patient/`)
-}
-function patient_patient_create(payload) {
-  return silentseaAPI.post(`/patient/patient/`, payload)
-}
-function patient_patient_retrieve(payload) {
-  return silentseaAPI.get(`/patient/patient/${payload.id}/`)
-}
-function patient_patient_update(payload) {
-  return silentseaAPI.put(`/patient/patient/${payload.id}/`, payload)
-}
-function patient_patient_partial_update(payload) {
-  return silentseaAPI.patch(`/patient/patient/${payload.id}/`, payload)
-}
-function patient_patient_destroy(payload) {
-  return silentseaAPI.delete(`/patient/patient/${payload.id}/`)
-}
 function patient_prescriptions_list(payload) {
   return silentseaAPI.get(`/patient/prescriptions/`)
 }
@@ -628,6 +628,12 @@ export const apiService = {
   api_v1_user_profiles_profile_retrieve,
   api_v1_user_profiles_profile_completion_retrieve,
   api_v1_user_profiles_update_profile_create,
+  meeting_zoom_meeting_list,
+  meeting_zoom_meeting_create,
+  meeting_zoom_meeting_retrieve,
+  meeting_zoom_meeting_update,
+  meeting_zoom_meeting_partial_update,
+  meeting_zoom_meeting_destroy,
   modules_contact_us_contact_us_create,
   modules_inventory_management_category_list,
   modules_inventory_management_category_create,
@@ -689,12 +695,6 @@ export const apiService = {
   patient_medical_records_update,
   patient_medical_records_partial_update,
   patient_medical_records_destroy,
-  patient_patient_list,
-  patient_patient_create,
-  patient_patient_retrieve,
-  patient_patient_update,
-  patient_patient_partial_update,
-  patient_patient_destroy,
   patient_prescriptions_list,
   patient_prescriptions_create,
   patient_prescriptions_retrieve,
