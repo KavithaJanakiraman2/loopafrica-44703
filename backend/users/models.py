@@ -261,7 +261,7 @@ class Appointment(models.Model):
         password (CharField): Password for the Zoom meeting.
     """
 
-    doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE)
+    doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE, related_name='doctor_appointment', null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_appointment', null=True, blank=True)
     date = models.DateField(null=True, blank=True)
     consult_time = models.TimeField(null=True, blank=True)

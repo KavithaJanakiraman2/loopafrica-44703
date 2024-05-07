@@ -21,6 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from users.models import User, UserProfile, PatientInfo, Doctor, Instructor, Feedback, Appointment, ToDoList, LikeDoctor
 from modules.two_factor_authentication.twofactorauth.utils import Util
 from modules.two_factor_authentication.twofactorauth.models import TwoFactorAuth
+from meeting.zoom.models import Zoom
 
 
 import os
@@ -612,10 +613,25 @@ class FeedbackSerializer(serializers.ModelSerializer):
         model = Feedback
         fields = ['user_id', 'name', 'email', 'subject', 'message', 'replied', 'reply_message', 'ratings']
 
+class ZoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Zoom
+        fields = '__all__'
+
 class AppointmentSerializer(serializers.ModelSerializer):
+    zoom = ZoomSerializer(many=True, required=False, allow_null=True, read_only=True, source='zoom_appointment')
+    doctor_name = serializers.SerializerMethodField()
+    specialization = serializers.SerializerMethodField()
+
     class Meta:
         model = Appointment
         fields = '__all__'
+
+    def get_doctor_name(self, obj):        
+        return obj.doctor.user.name if obj.doctor else None
+
+    def get_specialization(self, obj):
+        return obj.doctor.specialized if obj.doctor else None
 
 class UserProListSerializer(serializers.ModelSerializer):
     user = UserSerializer()

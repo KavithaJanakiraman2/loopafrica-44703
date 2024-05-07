@@ -430,8 +430,12 @@ class AppointmentViewSet(ModelViewSet):
         Returns:
         - Returns the serialized data of all appointments with HTTP status 200.
         """
-        # Filter the queryset based on the authenticated user
-        appointments_queryset = self.get_queryset().filter(user=request.user)
+        # Get today's date
+        today_date = timezone.now().date()
+
+        # Filter appointments queryset
+        appointments_queryset = self.get_queryset().filter(user=request.user, date__gte=today_date)
+        
         print(f"Appointments queryset: {appointments_queryset.first()}")
 
         # Filter Zoom objects associated with the filtered appointments
