@@ -15,7 +15,6 @@ from home.api.v1.viewsets import (
     DoctorViewSet,
     ToDoListViewSet,
     ResetPasswordView,
-    ZoomMeetingViewSet,
 )
 
 router = DefaultRouter()
@@ -25,8 +24,6 @@ router.register("feedback", FeedbackViewSet, basename="feedback")
 router.register(r'user-profiles', UserProfileViewSet, basename='user-profiles')
 router.register(r'doctors', DoctorViewSet, basename='doctors')
 router.register(r'todo', ToDoListViewSet, basename='todo-list')
-router.register(r'zoom-meeting', ZoomMeetingViewSet, basename='zoom-meeting')
-# router.register(r'zoom-token', ZoomOAuthTokenView, basename='zoom-token')
 
 urlpatterns = [
     path("", include(router.urls)),
@@ -35,7 +32,6 @@ urlpatterns = [
     path('edit-user/<int:pk>/', EditUserView.as_view(), name='edit-user'),
     path('sendresetpasswordemail/', SendPasswordResetEmailView.as_view(), name='sendresetpasswordemail'),
     path('changepassword/',ChangePasswordView.as_view(), name='changepassword'),
-    path('resetpassword/',ResetPasswordView.as_view(), name='resetpassword'),
     path('appointments/update-feedback/', AppointmentViewSet.as_view({'patch': 'update_feedback'}), name='update_feedback'),
     path('appointments/create/', AppointmentViewSet.as_view({'post':'create'}), name='create_appointment'),
     path('appointments/', AppointmentViewSet.as_view({'get':'list'}), name='list_appointments'),

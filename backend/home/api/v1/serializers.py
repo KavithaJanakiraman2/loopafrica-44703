@@ -21,7 +21,6 @@ from django.utils.translation import gettext_lazy as _
 from users.models import User, UserProfile, PatientInfo, Doctor, Instructor, Feedback, Appointment, ToDoList, LikeDoctor
 from modules.two_factor_authentication.twofactorauth.utils import Util
 from modules.two_factor_authentication.twofactorauth.models import TwoFactorAuth
-from meeting.zoom.models import Zoom
 
 
 import os
@@ -129,9 +128,10 @@ class SignupWithEmailSerializer(serializers.ModelSerializer):
         return super().save()
 
 class UserSerializer(serializers.ModelSerializer):
+    profile = UserProfileSerializer() # Nested serializer for user type
     class Meta:
         model = User
-        fields = ['id', 'email', 'full_name', 'first_name', 'last_name', 'dob','full_name','phone_number', 'gender', 'profile_picture']
+        fields = ['id', 'email', 'full_name', 'first_name', 'last_name', 'dob','full_name','phone_number', 'gender', 'profile_picture', 'profile']
 
 class DoctorListSerializer(serializers.ModelSerializer):    
     class Meta:
@@ -612,16 +612,10 @@ class FeedbackSerializer(serializers.ModelSerializer):
         model = Feedback
         fields = ['user_id', 'name', 'email', 'subject', 'message', 'replied', 'reply_message', 'ratings']
 
-class ZoomSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Zoom
-        fields = '__all__'
-
 class AppointmentSerializer(serializers.ModelSerializer):
-    zoom = ZoomSerializer(many=True, required=False, allow_null=True, read_only=True, source='zoom_appointment')
     class Meta:
         model = Appointment
-        fields = "__all__"
+        fields = '__all__'
 
 class UserProListSerializer(serializers.ModelSerializer):
     user = UserSerializer()
