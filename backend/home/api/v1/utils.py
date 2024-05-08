@@ -47,7 +47,9 @@ def send_push_notification(ids,message_title,message_body, consult_time, appoint
                 "Authorization": f"Basic {REST_API_KEY}"
             }
         res = requests.post(url, json=data, headers=headers)
+        print("response", res.json())
         var = res.json()
+        print("var", var)
         #extract notification id from the response
         notification_id = var.get('id')
         

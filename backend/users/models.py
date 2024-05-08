@@ -256,9 +256,6 @@ class Appointment(models.Model):
         status (CharField): The status of the appointment.
         last_updated_date (DateTimeField): The date and time when the appointment was last updated.
         last_updated_by (User): The user who last updated the appointment.
-        join_url (CharField): URL to join the Zoom meeting.
-        meeting_id (CharField): ID of the Zoom meeting.
-        password (CharField): Password for the Zoom meeting.
     """
 
     doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE, related_name='doctor_appointment', null=True, blank=True)
@@ -271,8 +268,6 @@ class Appointment(models.Model):
     feedback = models.TextField(null=True, blank=True)
     ratings = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=255, null=True, blank=True)
-    application_type = models.CharField(max_length=255, null=True, blank=True)
-    topic = models.CharField(max_length=255, null=True, blank=True)
     last_updated_date = models.DateTimeField(auto_now=True)
     last_updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='appoinment_last_updated_by')
 
