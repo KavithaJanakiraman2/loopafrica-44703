@@ -385,8 +385,6 @@ class AppointmentViewSet(ModelViewSet):
                     'id':appointment.id,
                     'user':appointment.user.id,
                     'doctor':appointment.doctor.user.id,
-                    'doctor_name':appointment.doctor.user.get_full_name(),
-                    'specialization':appointment.doctor.specialized,
                     'date':appointment.date,
                     'consult_time':appointment.consult_time,
                     'status':appointment.status,
